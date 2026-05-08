@@ -38,6 +38,40 @@ public class BetterPlayer: NSObject, FlutterPlatformView, FlutterStreamHandler, 
     private var pipController: AVPictureInPictureController?
     private var restoreUIOnPipStop: ((Bool) -> Void)?
 
+    /// Best-effort workaround to hide iOS system overlay label shown in the app
+    /// when PiP starts (e.g. "This video is playing in picture in picture.").
+    /// Apple doesn't provide a public API for this; we hide the overlay view
+    /// heuristically by searching view hierarchies for that label text.
+    private func hideSystemPiPOverlayInApp() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let windows: [UIWindow]
+            if #available(iOS 13.0, *) {
+                windows = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .flatMap { $0.windows }
+            } else {
+                windows = UIApplication.shared.windows
+            }
+            for window in windows {
+                self.hidePiPOverlay(in: window)
+            }
+        }
+    }
+
+    private func hidePiPOverlay(in view: UIView) {
+        if let label = view as? UILabel, let text = label.text?.lowercased() {
+            // Match the system string in a locale-tolerant way.
+            if text.contains("picture in picture") || text.contains("picture-in-picture") || text.contains("pip") {
+                // Hide label and its immediate container (usually holds the icon too).
+                label.isHidden = true
+                label.superview?.isHidden = true
+            }
+        }
+        for subview in view.subviews {
+            hidePiPOverlay(in: subview)
+        }
+    }
+
     public override init() {
         self.player = AVPlayer()
         super.init()
@@ -551,6 +585,7 @@ public class BetterPlayer: NSObject, FlutterPlatformView, FlutterStreamHandler, 
 
     public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         eventSink?(["event": "pipStart"])
+        hideSystemPiPOverlayInApp()
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {

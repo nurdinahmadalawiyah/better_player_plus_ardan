@@ -142,12 +142,6 @@ class _BetterPlayerWithControlsState extends State<BetterPlayerWithControls> {
       Container();
 
   Widget _buildControls(BuildContext context, BetterPlayerController betterPlayerController) {
-    // When Picture in Picture is active, iOS may show a system overlay
-    // ("This video is playing in picture in picture") on top of the platform
-    // view. Hide in-app controls while PiP is active.
-    if (betterPlayerController.videoPlayerController?.value.isPip ?? false) {
-      return const SizedBox();
-    }
     if (controlsConfiguration.showControls) {
       BetterPlayerTheme? playerTheme = controlsConfiguration.playerTheme;
       if (playerTheme == null) {
@@ -270,13 +264,6 @@ class _BetterPlayerVideoFitWidgetState extends State<_BetterPlayerVideoFitWidget
 
   @override
   Widget build(BuildContext context) {
-    // While Picture in Picture is active, iOS may overlay the platform view with
-    // a system message ("This video is playing in picture in picture").
-    // Returning an empty widget here prevents that overlay from being rendered.
-    if (controller?.value.isPip ?? false) {
-      return const SizedBox();
-    }
-
     if (_initialized && _started) {
       // iOS platform views (UiKitView) don't play well with Clip/Transform/FittedBox.
       // Render the platform view directly to avoid black screen.
